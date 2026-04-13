@@ -121,6 +121,20 @@ export class AuthPageComponent {}
 - `loginWithPasskey()` posts to `/realms/{realm}/passkey/authenticate`, then refreshes auth state with Keycloak `check-sso`.
 - `passkey-list` loads and removes credentials from `/realms/{realm}/account/credentials`.
 
+## Styling
+
+Components now ship with built-in default styling. You can override colors/radius with CSS variables in your app shell:
+
+```css
+:root {
+  --pk-primary-bg: #1d4ed8;
+  --pk-primary-bg-hover: #1e40af;
+  --pk-accent-bg: #0f766e;
+  --pk-danger-bg: #dc2626;
+  --pk-radius: 12px;
+}
+```
+
 ## Repository Release Flow (Maintainers)
 
 Build and validate tarball contents:

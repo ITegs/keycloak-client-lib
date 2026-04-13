@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
+import { Component, DestroyRef, EventEmitter, Input, OnInit, Output, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { PasskeyCredentialSummary } from '../passkey-client.models';
 import { PasskeyClientService } from '../passkey-client.service';
 
@@ -8,21 +9,29 @@ import { PasskeyClientService } from '../passkey-client.service';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div>
-      <button type="button" (click)="refresh()" [disabled]="loading || disabled">{{ refreshLabel }}</button>
+    <div class="pk-list">
+      <div class="pk-list-actions">
+        <button class="pk-btn pk-btn-muted" type="button" (click)="refresh()" [disabled]="isRefreshDisabled">
+          {{ refreshLabel }}
+        </button>
+      </div>
 
-      <p *ngIf="errorMessage">{{ errorMessage }}</p>
-      <p *ngIf="!loading && !errorMessage && credentials.length === 0">{{ emptyLabel }}</p>
+      <p class="pk-feedback pk-feedback-empty" *ngIf="!canManage">{{ unauthenticatedLabel }}</p>
+      <p class="pk-feedback pk-feedback-error" *ngIf="errorMessage">{{ errorMessage }}</p>
+      <p class="pk-feedback pk-feedback-empty" *ngIf="canManage && !loading && !errorMessage && credentials.length === 0">
+        {{ emptyLabel }}
+      </p>
 
-      <ul *ngIf="credentials.length > 0">
-        <li *ngFor="let credential of credentials">
-          <div>
-            <strong>{{ credential.name }}</strong>
-            <div>{{ formatCreatedDate(credential.createdDate) }}</div>
+      <ul class="pk-items" *ngIf="canManage && credentials.length > 0">
+        <li class="pk-item" *ngFor="let credential of credentials">
+          <div class="pk-item-info">
+            <strong class="pk-item-name">{{ credential.name }}</strong>
+            <div class="pk-item-date">{{ formatCreatedDate(credential.createdDate) }}</div>
           </div>
           <button
+            class="pk-btn pk-btn-danger"
             type="button"
-            [disabled]="loading || disabled || !credential.id"
+            [disabled]="loading || disabled || !canManage || !credential.id"
             (click)="remove(credential.id)"
           >
             {{ removeLabel }}
@@ -30,12 +39,124 @@ import { PasskeyClientService } from '../passkey-client.service';
         </li>
       </ul>
     </div>
-  `
+  `,
+  styles: [
+    `
+      :host {
+        display: block;
+      }
+
+      .pk-list {
+        display: grid;
+        gap: 0.75rem;
+      }
+
+      .pk-list-actions {
+        display: flex;
+        justify-content: flex-end;
+      }
+
+      .pk-items {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: 0.6rem;
+      }
+
+      .pk-item {
+        align-items: center;
+        background: var(--pk-surface, #ffffff);
+        border: 1px solid var(--pk-border, #e5e7eb);
+        border-radius: var(--pk-radius, 10px);
+        display: flex;
+        gap: 1rem;
+        justify-content: space-between;
+        padding: 0.7rem 0.8rem;
+      }
+
+      .pk-item-info {
+        min-width: 0;
+      }
+
+      .pk-item-name {
+        color: var(--pk-text-strong, #111827);
+        display: block;
+        font-weight: 700;
+      }
+
+      .pk-item-date {
+        color: var(--pk-text-muted, #6b7280);
+        font-size: 0.9rem;
+      }
+
+      .pk-feedback {
+        margin: 0;
+        padding: 0.65rem 0.8rem;
+        border-radius: var(--pk-radius, 10px);
+      }
+
+      .pk-feedback-error {
+        background: var(--pk-danger-bg-soft, #fef2f2);
+        border: 1px solid var(--pk-danger-border-soft, #fecaca);
+        color: var(--pk-danger-fg-soft, #991b1b);
+      }
+
+      .pk-feedback-empty {
+        background: var(--pk-muted-bg-soft, #f8fafc);
+        border: 1px solid var(--pk-border, #e5e7eb);
+        color: var(--pk-text-muted, #6b7280);
+      }
+
+      .pk-btn {
+        appearance: none;
+        border-radius: var(--pk-radius, 10px);
+        cursor: pointer;
+        font: inherit;
+        font-weight: 600;
+        line-height: 1.2;
+        padding: 0.5rem 0.85rem;
+        transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.12s ease;
+      }
+
+      .pk-btn:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+      }
+
+      .pk-btn-muted {
+        background: var(--pk-muted-bg, #ffffff);
+        border: 1px solid var(--pk-muted-border, #d1d5db);
+        color: var(--pk-muted-fg, #111827);
+      }
+
+      .pk-btn-muted:not(:disabled):hover {
+        background: var(--pk-muted-bg-hover, #f9fafb);
+        border-color: var(--pk-muted-border-hover, #9ca3af);
+      }
+
+      .pk-btn-danger {
+        background: var(--pk-danger-bg, #dc2626);
+        border: 1px solid var(--pk-danger-bg, #dc2626);
+        color: var(--pk-danger-fg, #ffffff);
+      }
+
+      .pk-btn-danger:not(:disabled):hover {
+        background: var(--pk-danger-bg-hover, #b91c1c);
+        border-color: var(--pk-danger-bg-hover, #b91c1c);
+      }
+
+      .pk-btn:not(:disabled):active {
+        transform: translateY(1px);
+      }
+    `
+  ]
 })
 export class PasskeyListComponent implements OnInit {
   @Input() disabled = false;
   @Input() autoLoad = true;
   @Input() emptyLabel = 'No passkeys registered yet.';
+  @Input() unauthenticatedLabel = 'Log in to manage passkeys.';
   @Input() refreshLabel = 'Refresh';
   @Input() removeLabel = 'Remove';
 
@@ -46,16 +167,42 @@ export class PasskeyListComponent implements OnInit {
   credentials: PasskeyCredentialSummary[] = [];
   loading = false;
   errorMessage = '';
+  private ready = false;
+  private authenticated = false;
+  private readonly destroyRef = inject(DestroyRef);
 
-  constructor(private readonly passkeyClient: PasskeyClientService) {}
+  constructor(private readonly passkeyClient: PasskeyClientService) {
+    this.passkeyClient.state$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((state) => {
+      this.ready = state.ready;
+      this.authenticated = state.authenticated;
+      if (!this.canManage) {
+        this.credentials = [];
+        this.loading = false;
+      }
+    });
+  }
+
+  get canManage(): boolean {
+    return this.ready && this.authenticated && !this.disabled;
+  }
+
+  get isRefreshDisabled(): boolean {
+    return this.loading || !this.canManage;
+  }
 
   ngOnInit(): void {
-    if (this.autoLoad) {
+    if (this.autoLoad && this.canManage) {
       void this.refresh();
     }
   }
 
   async refresh(): Promise<void> {
+    if (!this.canManage) {
+      this.credentials = [];
+      this.errorMessage = '';
+      return;
+    }
+
     this.loading = true;
     this.errorMessage = '';
     try {
@@ -71,6 +218,10 @@ export class PasskeyListComponent implements OnInit {
   }
 
   async remove(credentialId: string): Promise<void> {
+    if (!this.canManage) {
+      return;
+    }
+
     this.loading = true;
     this.errorMessage = '';
     try {

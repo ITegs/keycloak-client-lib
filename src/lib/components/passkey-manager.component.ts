@@ -8,9 +8,9 @@ import { RegisterPasskeyButtonComponent } from './register-passkey-button.compon
   standalone: true,
   imports: [CommonModule, RegisterPasskeyButtonComponent, PasskeyListComponent],
   template: `
-    <section>
-      <header>
-        <h3>{{ title }}</h3>
+    <section class="pk-manager">
+      <header class="pk-manager-header">
+        <h3 class="pk-manager-title">{{ title }}</h3>
         <register-passkey-button
           [label]="registerLabel"
           [loadingLabel]="registerLoadingLabel"
@@ -27,7 +27,36 @@ import { RegisterPasskeyButtonComponent } from './register-passkey-button.compon
         [removeLabel]="removeLabel"
       />
     </section>
-  `
+  `,
+  styles: [
+    `
+      :host {
+        display: block;
+      }
+
+      .pk-manager {
+        background: var(--pk-surface-soft, #f8fafc);
+        border: 1px solid var(--pk-border, #e5e7eb);
+        border-radius: var(--pk-radius-lg, 14px);
+        display: grid;
+        gap: 1rem;
+        padding: 1rem;
+      }
+
+      .pk-manager-header {
+        align-items: center;
+        display: flex;
+        gap: 0.75rem;
+        justify-content: space-between;
+      }
+
+      .pk-manager-title {
+        color: var(--pk-text-strong, #111827);
+        font-size: 1rem;
+        margin: 0;
+      }
+    `
+  ]
 })
 export class PasskeyManagerComponent {
   @Input() title = 'Your Passkeys';
