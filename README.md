@@ -1,11 +1,15 @@
-# passkey-client-lib
+# keycloak-client-lib
 
-Angular standalone component + service library for Keycloak passkey (WebAuthn) flows.
+Angular standalone authentication library for Keycloak, including:
+- auth context/service (`AuthClientService`)
+- user/session state (`AuthState`, `AuthUser`)
+- ready-to-use auth components
+- passkey (WebAuthn) registration, login, listing, and deletion
 
 ## Install
 
 ```bash
-npm install ITegs/passkey-client-lib
+npm install ITegs/keycloak-client-lib
 ```
 
 Required peer dependencies:
@@ -16,16 +20,16 @@ Required peer dependencies:
 
 ## Quick Start
 
-Register the library config once during bootstrap:
+Register the auth config once during bootstrap:
 
 ```ts
 import { bootstrapApplication } from '@angular/platform-browser';
 import { AppComponent } from './app/app.component';
-import { providePasskeyClient } from 'passkey-client-lib';
+import { provideAuthClient } from 'keycloak-client-lib';
 
 bootstrapApplication(AppComponent, {
   providers: [
-    providePasskeyClient({
+    provideAuthClient({
       keycloak: {
         url: 'http://localhost:8080',
         realm: 'demo',
@@ -47,61 +51,75 @@ bootstrapApplication(AppComponent, {
 Initialize auth state once on app startup:
 
 ```ts
-import { Component, inject } from '@angular/core';
-import { PasskeyClientService } from 'passkey-client-lib';
+import { Component, OnInit, inject } from '@angular/core';
+import { AuthClientService } from 'keycloak-client-lib';
 
 @Component({
   selector: 'app-root',
   template: '<router-outlet />'
 })
-export class AppComponent {
-  private readonly passkeyClient = inject(PasskeyClientService);
+export class AppComponent implements OnInit {
+  private readonly authClient = inject(AuthClientService);
 
   async ngOnInit(): Promise<void> {
-    await this.passkeyClient.init();
+    await this.authClient.init();
   }
 }
 ```
 
-Use the provided standalone UI components:
+Render a complete authentication UI with one component:
 
 ```ts
 import { Component } from '@angular/core';
-import {
-  LoginWithPasskeyButtonComponent,
-  LoginWithPasswordButtonComponent,
-  LogoutButtonComponent,
-  PasskeyManagerComponent
-} from 'passkey-client-lib';
+import { AuthPanelComponent } from 'keycloak-client-lib';
 
 @Component({
   selector: 'app-auth-page',
   standalone: true,
-  imports: [
-    LoginWithPasswordButtonComponent,
-    LoginWithPasskeyButtonComponent,
-    LogoutButtonComponent,
-    PasskeyManagerComponent
-  ],
-  template: `
-    <login-with-password-button label="Login"></login-with-password-button>
-    <login-with-passkey-button label="Login with Passkey"></login-with-passkey-button>
-    <logout-button></logout-button>
-    <passkey-manager></passkey-manager>
-  `
+  imports: [AuthPanelComponent],
+  template: '<auth-panel />'
 })
 export class AuthPageComponent {}
 ```
 
-## Exports
+## Auth Context and User Data
 
-- `providePasskeyClient`
-- `PasskeyClientService`
-- `PasskeyAuthState`, `PasskeyActionResult`, `PasskeyClientConfig`, `PasskeyCredentialSummary`
-- `LoginWithPasskeyButtonComponent`
+`AuthClientService` exposes:
+- `state$`: complete auth state (`ready`, `authenticated`, `loading`, `error`, `user`)
+- `authenticated$`: boolean stream for session status
+- `user$`: normalized user stream (`AuthUser`)
+- session methods: `init`, `login`, `logout`, `refreshAuthState`, `refreshToken`, `loadUserData`
+- passkey methods: `loginWithPasskey`, `registerPasskey`, `listPasskeys`, `deletePasskey`
+
+You can inject context directly:
+
+```ts
+import { Component } from '@angular/core';
+import { AuthGateComponent, AuthUserComponent } from 'keycloak-client-lib';
+
+@Component({
+  selector: 'app-account',
+  standalone: true,
+  imports: [AuthGateComponent, AuthUserComponent],
+  template: `
+    <auth-gate>
+      <auth-user authAuthenticated />
+      <p authUnauthenticated>Please sign in.</p>
+    </auth-gate>
+  `
+})
+export class AccountComponent {}
+```
+
+## Exported Components
+
+- `AuthPanelComponent`
+- `AuthGateComponent`
+- `AuthUserComponent`
 - `LoginWithPasswordButtonComponent`
-- `RegisterPasskeyButtonComponent`
+- `LoginWithPasskeyButtonComponent`
 - `LogoutButtonComponent`
+- `RegisterPasskeyButtonComponent`
 - `PasskeyListComponent`
 - `PasskeyManagerComponent`
 
@@ -118,31 +136,27 @@ export class AuthPageComponent {}
 </html>
 ```
 
-- `loginWithPasskey()` posts to `/realms/{realm}/passkey/authenticate`, then refreshes auth state with Keycloak `check-sso`.
-- `passkey-list` loads and removes credentials from `/realms/{realm}/account/credentials`.
+- Passkey endpoints expected by the client:
+  - `POST /realms/{realm}/passkey/challenge`
+  - `POST /realms/{realm}/passkey/authenticate`
+  - `POST /realms/{realm}/passkey/save`
+  - `GET/DELETE /realms/{realm}/account/credentials`
 
 ## Styling
 
-Components now ship with built-in default styling. You can override colors/radius with CSS variables in your app shell:
+Components include defaults and can be themed with CSS variables:
 
 ```css
 :root {
-  --pk-primary-bg: #1d4ed8;
-  --pk-primary-bg-hover: #1e40af;
-  --pk-accent-bg: #0f766e;
-  --pk-danger-bg: #dc2626;
+  --pk-primary-bg: #111111;
+  --pk-primary-bg-hover: #000000;
+  --pk-accent-bg: #ffffff;
+  --pk-accent-border: #111111;
+  --pk-muted-border: #111111;
+  --pk-danger-border: #111111;
+  --pk-border: #d4d4d4;
+  --pk-text-strong: #111111;
+  --pk-text-muted: #555555;
   --pk-radius: 12px;
 }
 ```
-
-## Repository Release Flow (Maintainers)
-
-Build and validate tarball contents:
-
-```bash
-npm install
-npm run build
-npm run pack:dry
-```
-
-This package is intended to be consumed directly from GitHub, not from the npm registry.

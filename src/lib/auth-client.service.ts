@@ -1,20 +1,20 @@
-import { Inject, Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { Injectable, inject } from '@angular/core';
+import { BehaviorSubject, distinctUntilChanged, map } from 'rxjs';
 import Keycloak, {
   KeycloakInitOptions,
-  KeycloakInstance,
   KeycloakLoginOptions,
-  KeycloakLogoutOptions
+  KeycloakLogoutOptions,
+  KeycloakProfile
 } from 'keycloak-js';
 import { arrayBufferToBase64Url, base64UrlToArrayBuffer } from './base64url';
+import { AUTH_CLIENT_CONFIG } from './auth-client.config';
 import {
-  PasskeyActionResult,
-  PasskeyAuthState,
-  PasskeyChallengeResponse,
-  PasskeyClientConfig,
-  PasskeyCredentialSummary
-} from './passkey-client.models';
-import { PASSKEY_CLIENT_CONFIG } from './passkey-client.config';
+  AuthActionResult,
+  AuthPasskeyChallengeResponse,
+  AuthPasskeyCredentialSummary,
+  AuthState,
+  AuthUser
+} from './auth-client.models';
 
 interface PasskeyCredentialResponse {
   id?: string;
@@ -30,30 +30,50 @@ interface AccountCredentialTypeResponse {
 
 const PASSKEY_CREDENTIAL_TYPES = new Set(['webauthn-passwordless', 'webauthn']);
 
+const INITIAL_STATE: AuthState = {
+  authenticated: false,
+  ready: false,
+  loading: false,
+  user: null,
+  userName: null,
+  error: null
+};
+
 @Injectable({ providedIn: 'root' })
-export class PasskeyClientService {
-  private keycloak: KeycloakInstance;
-  private readonly stateSubject = new BehaviorSubject<PasskeyAuthState>({
-    authenticated: false,
-    ready: false,
-    userName: null,
-    error: null
-  });
+export class AuthClientService {
+  private readonly config = inject(AUTH_CLIENT_CONFIG);
+  private keycloak = this.createKeycloak();
+  private readonly stateSubject = new BehaviorSubject<AuthState>(INITIAL_STATE);
 
   readonly state$ = this.stateSubject.asObservable();
+  readonly user$ = this.state$.pipe(map((state) => state.user), distinctUntilChanged());
+  readonly authenticated$ = this.state$.pipe(
+    map((state) => state.authenticated),
+    distinctUntilChanged()
+  );
 
-  constructor(@Inject(PASSKEY_CLIENT_CONFIG) private readonly config: PasskeyClientConfig) {
-    this.keycloak = this.createKeycloak();
+  get state(): AuthState {
+    return this.stateSubject.value;
+  }
+
+  get user(): AuthUser | null {
+    return this.state.user;
   }
 
   async init(): Promise<boolean> {
+    this.setPartialState({ loading: true, error: null });
+
     try {
       this.keycloak = this.createKeycloak();
       const authenticated = await this.keycloak.init(this.checkSsoOptions);
+      const user = authenticated ? await this.resolveUser() : null;
+
       this.setState({
         authenticated,
         ready: true,
-        userName: this.keycloak.tokenParsed?.preferred_username ?? null,
+        loading: false,
+        user,
+        userName: user?.username ?? null,
         error: null
       });
       return authenticated;
@@ -61,6 +81,8 @@ export class PasskeyClientService {
       this.setState({
         authenticated: false,
         ready: true,
+        loading: false,
+        user: null,
         userName: null,
         error: this.errorMessage(error, 'Keycloak initialization failed')
       });
@@ -68,7 +90,12 @@ export class PasskeyClientService {
     }
   }
 
+  login(options?: KeycloakLoginOptions): Promise<void> {
+    return this.loginWithPassword(options);
+  }
+
   loginWithPassword(options?: KeycloakLoginOptions): Promise<void> {
+    this.setPartialState({ loading: true, error: null });
     return this.keycloak.login({
       redirectUri: this.currentUrl(),
       ...options
@@ -76,10 +103,94 @@ export class PasskeyClientService {
   }
 
   logout(options?: KeycloakLogoutOptions): Promise<void> {
+    this.setPartialState({ loading: true, error: null });
     return this.keycloak.logout(options);
   }
 
-  async registerPasskey(): Promise<PasskeyActionResult> {
+  async refreshAuthState(): Promise<boolean> {
+    this.setPartialState({ loading: true, error: null });
+
+    try {
+      const refreshedClient = this.createKeycloak();
+      const authenticated = await refreshedClient.init(this.checkSsoOptions);
+
+      this.keycloak = refreshedClient;
+      const user = authenticated ? await this.resolveUser() : null;
+      this.setState({
+        authenticated,
+        ready: true,
+        loading: false,
+        user,
+        userName: user?.username ?? null,
+        error: null
+      });
+      return authenticated;
+    } catch (error) {
+      this.setState({
+        ...this.state,
+        authenticated: false,
+        loading: false,
+        user: null,
+        userName: null,
+        error: this.errorMessage(error, 'Unable to refresh auth state')
+      });
+      return false;
+    }
+  }
+
+  async refreshToken(minValiditySeconds = 30): Promise<boolean> {
+    if (!this.keycloak.authenticated) {
+      return false;
+    }
+
+    try {
+      const refreshed = await this.keycloak.updateToken(minValiditySeconds);
+      await this.loadUserData();
+      return refreshed;
+    } catch (error) {
+      this.setPartialState({
+        loading: false,
+        error: this.errorMessage(error, 'Token refresh failed')
+      });
+      return false;
+    }
+  }
+
+  async loadUserData(): Promise<AuthUser | null> {
+    if (!this.keycloak.authenticated) {
+      this.setState({
+        ...this.state,
+        authenticated: false,
+        loading: false,
+        user: null,
+        userName: null,
+        error: null
+      });
+      return null;
+    }
+
+    try {
+      const user = await this.resolveUser();
+      this.setState({
+        ...this.state,
+        authenticated: true,
+        ready: true,
+        loading: false,
+        user,
+        userName: user?.username ?? null,
+        error: null
+      });
+      return user;
+    } catch (error) {
+      this.setPartialState({
+        loading: false,
+        error: this.errorMessage(error, 'Unable to load user data')
+      });
+      return null;
+    }
+  }
+
+  async registerPasskey(): Promise<AuthActionResult> {
     this.requireBrowserApi();
     if (!this.keycloak.authenticated || !this.keycloak.tokenParsed) {
       throw new Error('User must be logged in before creating a passkey.');
@@ -149,7 +260,7 @@ export class PasskeyClientService {
     return { success: true, message: 'Passkey created.' };
   }
 
-  async loginWithPasskey(): Promise<PasskeyActionResult> {
+  async loginWithPasskey(): Promise<AuthActionResult> {
     this.requireBrowserApi();
 
     const challengePayload = await this.fetchChallenge();
@@ -202,11 +313,15 @@ export class PasskeyClientService {
       throw new Error(payload.error ?? 'Passkey authentication failed');
     }
 
-    await this.refreshFromBrowserSession();
+    const authenticated = await this.refreshAuthState();
+    if (!authenticated) {
+      throw new Error('Session cookie was not accepted by Keycloak check-sso');
+    }
+
     return { success: true, message: 'Authenticated with passkey.' };
   }
 
-  async listPasskeys(): Promise<PasskeyCredentialSummary[]> {
+  async listPasskeys(): Promise<AuthPasskeyCredentialSummary[]> {
     if (!this.keycloak.authenticated || !this.keycloak.token) {
       return [];
     }
@@ -254,11 +369,15 @@ export class PasskeyClientService {
     return Boolean(this.keycloak.authenticated);
   }
 
-  get keycloakClient(): KeycloakInstance {
+  get accessToken(): string | undefined {
+    return this.keycloak.token;
+  }
+
+  get keycloakClient(): Keycloak {
     return this.keycloak;
   }
 
-  private createKeycloak(): KeycloakInstance {
+  private createKeycloak(): Keycloak {
     return new Keycloak({
       url: this.config.keycloak.url,
       realm: this.config.keycloak.realm,
@@ -290,11 +409,11 @@ export class PasskeyClientService {
     ).toString();
   }
 
-  private async fetchChallenge(): Promise<PasskeyChallengeResponse> {
+  private async fetchChallenge(): Promise<AuthPasskeyChallengeResponse> {
     const challengeResponse = await fetch(this.passkeyEndpoint('challenge'), {
       credentials: 'include'
     });
-    const challengePayload = await this.parseJsonResponse<PasskeyChallengeResponse>(challengeResponse, {
+    const challengePayload = await this.parseJsonResponse<AuthPasskeyChallengeResponse>(challengeResponse, {
       challenge: ''
     });
     if (!challengeResponse.ok || !challengePayload.challenge) {
@@ -303,20 +422,92 @@ export class PasskeyClientService {
     return challengePayload;
   }
 
-  private async refreshFromBrowserSession(): Promise<void> {
-    const refreshedClient = this.createKeycloak();
-    const authenticated = await refreshedClient.init(this.checkSsoOptions);
-    if (!authenticated) {
-      throw new Error('Session cookie was not accepted by Keycloak check-sso');
+  private async resolveUser(): Promise<AuthUser | null> {
+    const claims = this.tokenClaims();
+    const profile = this.keycloak.authenticated
+      ? await this.keycloak.loadUserProfile().catch(() => null)
+      : null;
+
+    return this.buildUser(claims, profile);
+  }
+
+  private buildUser(claims: Record<string, unknown>, profile: KeycloakProfile | null): AuthUser | null {
+    const username =
+      this.readString(claims['preferred_username']) ??
+      profile?.username ??
+      profile?.email ??
+      this.readString(claims['email']);
+    if (!username) {
+      return null;
     }
 
-    this.keycloak = refreshedClient;
-    this.setState({
-      authenticated: true,
-      ready: true,
-      userName: refreshedClient.tokenParsed?.preferred_username ?? null,
-      error: null
-    });
+    const id = this.readString(claims['sub']) ?? profile?.id ?? username;
+    const firstName = this.readString(claims['given_name']) ?? profile?.firstName ?? null;
+    const lastName = this.readString(claims['family_name']) ?? profile?.lastName ?? null;
+    const email = this.readString(claims['email']) ?? profile?.email ?? null;
+    const claimsName = this.readString(claims['name']);
+    const combinedName = [firstName, lastName].filter((value): value is string => Boolean(value)).join(' ');
+    const name = claimsName ?? (combinedName.trim() || null);
+
+    return {
+      id,
+      username,
+      email,
+      name,
+      firstName,
+      lastName,
+      roles: this.extractRoles(claims),
+      claims
+    };
+  }
+
+  private extractRoles(claims: Record<string, unknown>): string[] {
+    const roles = new Set<string>();
+
+    const realmAccess = claims['realm_access'];
+    if (realmAccess && typeof realmAccess === 'object') {
+      const realmRoles = this.asStringArray((realmAccess as { roles?: unknown }).roles);
+      for (const role of realmRoles) {
+        roles.add(role);
+      }
+    }
+
+    const resourceAccess = claims['resource_access'];
+    if (resourceAccess && typeof resourceAccess === 'object') {
+      for (const resource of Object.values(resourceAccess as Record<string, unknown>)) {
+        if (resource && typeof resource === 'object') {
+          const resourceRoles = this.asStringArray((resource as { roles?: unknown }).roles);
+          for (const role of resourceRoles) {
+            roles.add(role);
+          }
+        }
+      }
+    }
+
+    return [...roles];
+  }
+
+  private tokenClaims(): Record<string, unknown> {
+    const tokenParsed = this.keycloak.tokenParsed;
+    if (!tokenParsed || typeof tokenParsed !== 'object') {
+      return {};
+    }
+    return tokenParsed as Record<string, unknown>;
+  }
+
+  private asStringArray(value: unknown): string[] {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+    return value.filter((item): item is string => typeof item === 'string' && item.length > 0);
+  }
+
+  private readString(value: unknown): string | null {
+    if (typeof value !== 'string') {
+      return null;
+    }
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
   }
 
   private parseCredentialTypes(payload: AccountCredentialTypeResponse[]): PasskeyCredentialResponse[] {
@@ -347,14 +538,21 @@ export class PasskeyClientService {
     return (await response.json().catch(() => fallbackValue)) as T;
   }
 
-  private setState(next: PasskeyAuthState): void {
+  private setState(next: AuthState): void {
     this.stateSubject.next(next);
+  }
+
+  private setPartialState(next: Partial<AuthState>): void {
+    this.setState({
+      ...this.state,
+      ...next
+    });
   }
 
   private currentUrl(): string {
     return typeof window === 'undefined' ? '/' : window.location.href;
   }
-
+w
   private errorMessage(error: unknown, fallback: string): string {
     if (error instanceof Error && error.message) {
       return error.message;

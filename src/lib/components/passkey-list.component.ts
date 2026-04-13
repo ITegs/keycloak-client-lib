@@ -1,8 +1,8 @@
 import { CommonModule } from '@angular/common';
 import { Component, DestroyRef, EventEmitter, Input, OnInit, Output, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { PasskeyCredentialSummary } from '../passkey-client.models';
-import { PasskeyClientService } from '../passkey-client.service';
+import { AuthPasskeyCredentialSummary } from '../auth-client.models';
+import { AuthClientService } from '../auth-client.service';
 
 @Component({
   selector: 'passkey-list',
@@ -11,7 +11,7 @@ import { PasskeyClientService } from '../passkey-client.service';
   template: `
     <div class="pk-list">
       <div class="pk-list-actions">
-        <button class="pk-btn pk-btn-muted" type="button" (click)="refresh()" [disabled]="isRefreshDisabled">
+        <button class="pk-btn pk-btn-muted" type="button" (click)="refresh()">
           {{ refreshLabel }}
         </button>
       </div>
@@ -31,7 +31,6 @@ import { PasskeyClientService } from '../passkey-client.service';
           <button
             class="pk-btn pk-btn-danger"
             type="button"
-            [disabled]="loading || disabled || !canManage || !credential.id"
             (click)="remove(credential.id)"
           >
             {{ removeLabel }}
@@ -67,8 +66,8 @@ import { PasskeyClientService } from '../passkey-client.service';
       .pk-item {
         align-items: center;
         background: var(--pk-surface, #ffffff);
-        border: 1px solid var(--pk-border, #e5e7eb);
-        border-radius: var(--pk-radius, 10px);
+        border: 1px solid var(--pk-border, #d4d4d4);
+        border-radius: var(--pk-radius, 12px);
         display: flex;
         gap: 1rem;
         justify-content: space-between;
@@ -80,13 +79,13 @@ import { PasskeyClientService } from '../passkey-client.service';
       }
 
       .pk-item-name {
-        color: var(--pk-text-strong, #111827);
+        color: var(--pk-text-strong, #111111);
         display: block;
         font-weight: 700;
       }
 
       .pk-item-date {
-        color: var(--pk-text-muted, #6b7280);
+        color: var(--pk-text-muted, #555555);
         font-size: 0.9rem;
       }
 
@@ -97,26 +96,26 @@ import { PasskeyClientService } from '../passkey-client.service';
       }
 
       .pk-feedback-error {
-        background: var(--pk-danger-bg-soft, #fef2f2);
-        border: 1px solid var(--pk-danger-border-soft, #fecaca);
-        color: var(--pk-danger-fg-soft, #991b1b);
+        background: var(--pk-danger-bg-soft, #f2f2f2);
+        border: 1px solid var(--pk-danger-border-soft, #111111);
+        color: var(--pk-danger-fg-soft, #111111);
       }
 
       .pk-feedback-empty {
-        background: var(--pk-muted-bg-soft, #f8fafc);
-        border: 1px solid var(--pk-border, #e5e7eb);
-        color: var(--pk-text-muted, #6b7280);
+        background: var(--pk-muted-bg-soft, #f7f7f7);
+        border: 1px solid var(--pk-border, #d4d4d4);
+        color: var(--pk-text-muted, #555555);
       }
 
       .pk-btn {
         appearance: none;
-        border-radius: var(--pk-radius, 10px);
+        border-radius: var(--pk-radius, 12px);
         cursor: pointer;
         font: inherit;
         font-weight: 600;
         line-height: 1.2;
         padding: 0.5rem 0.85rem;
-        transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.12s ease;
+        transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.12s ease;
       }
 
       .pk-btn:disabled {
@@ -126,24 +125,26 @@ import { PasskeyClientService } from '../passkey-client.service';
 
       .pk-btn-muted {
         background: var(--pk-muted-bg, #ffffff);
-        border: 1px solid var(--pk-muted-border, #d1d5db);
-        color: var(--pk-muted-fg, #111827);
+        border: 1px solid var(--pk-muted-border, #111111);
+        color: var(--pk-muted-fg, #111111);
       }
 
       .pk-btn-muted:not(:disabled):hover {
-        background: var(--pk-muted-bg-hover, #f9fafb);
-        border-color: var(--pk-muted-border-hover, #9ca3af);
+        background: var(--pk-muted-bg-hover, #111111);
+        border-color: var(--pk-muted-border-hover, #111111);
+        color: var(--pk-muted-fg-hover, #ffffff);
       }
 
       .pk-btn-danger {
-        background: var(--pk-danger-bg, #dc2626);
-        border: 1px solid var(--pk-danger-bg, #dc2626);
-        color: var(--pk-danger-fg, #ffffff);
+        background: var(--pk-danger-bg, #ffffff);
+        border: 1px solid var(--pk-danger-border, #111111);
+        color: var(--pk-danger-fg, #111111);
       }
 
       .pk-btn-danger:not(:disabled):hover {
-        background: var(--pk-danger-bg-hover, #b91c1c);
-        border-color: var(--pk-danger-bg-hover, #b91c1c);
+        background: var(--pk-danger-bg-hover, #111111);
+        border-color: var(--pk-danger-border-hover, #111111);
+        color: var(--pk-danger-fg-hover, #ffffff);
       }
 
       .pk-btn:not(:disabled):active {
@@ -160,19 +161,19 @@ export class PasskeyListComponent implements OnInit {
   @Input() refreshLabel = 'Refresh';
   @Input() removeLabel = 'Remove';
 
-  @Output() refreshed = new EventEmitter<PasskeyCredentialSummary[]>();
+  @Output() refreshed = new EventEmitter<AuthPasskeyCredentialSummary[]>();
   @Output() removed = new EventEmitter<string>();
   @Output() failure = new EventEmitter<Error>();
 
-  credentials: PasskeyCredentialSummary[] = [];
+  credentials: AuthPasskeyCredentialSummary[] = [];
   loading = false;
   errorMessage = '';
   private ready = false;
   private authenticated = false;
   private readonly destroyRef = inject(DestroyRef);
 
-  constructor(private readonly passkeyClient: PasskeyClientService) {
-    this.passkeyClient.state$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((state) => {
+  constructor(private readonly authClient: AuthClientService) {
+    this.authClient.state$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((state) => {
       this.ready = state.ready;
       this.authenticated = state.authenticated;
       if (!this.canManage) {
@@ -184,10 +185,6 @@ export class PasskeyListComponent implements OnInit {
 
   get canManage(): boolean {
     return this.ready && this.authenticated && !this.disabled;
-  }
-
-  get isRefreshDisabled(): boolean {
-    return this.loading || !this.canManage;
   }
 
   ngOnInit(): void {
@@ -206,7 +203,7 @@ export class PasskeyListComponent implements OnInit {
     this.loading = true;
     this.errorMessage = '';
     try {
-      this.credentials = await this.passkeyClient.listPasskeys();
+      this.credentials = await this.authClient.listPasskeys();
       this.refreshed.emit(this.credentials);
     } catch (error) {
       const typedError = error instanceof Error ? error : new Error('Unable to load passkeys.');
@@ -225,7 +222,7 @@ export class PasskeyListComponent implements OnInit {
     this.loading = true;
     this.errorMessage = '';
     try {
-      await this.passkeyClient.deletePasskey(credentialId);
+      await this.authClient.deletePasskey(credentialId);
       this.removed.emit(credentialId);
       await this.refresh();
     } catch (error) {

@@ -35,9 +35,10 @@ import { RegisterPasskeyButtonComponent } from './register-passkey-button.compon
       }
 
       .pk-manager {
-        background: var(--pk-surface-soft, #f8fafc);
-        border: 1px solid var(--pk-border, #e5e7eb);
+        background: var(--pk-surface-soft, #f7f7f7);
+        border: 1px solid var(--pk-border, #d4d4d4);
         border-radius: var(--pk-radius-lg, 14px);
+        box-shadow: var(--pk-shadow-soft, 0 2px 10px rgba(0, 0, 0, 0.06));
         display: grid;
         gap: 1rem;
         padding: 1rem;
@@ -51,7 +52,7 @@ import { RegisterPasskeyButtonComponent } from './register-passkey-button.compon
       }
 
       .pk-manager-title {
-        color: var(--pk-text-strong, #111827);
+        color: var(--pk-text-strong, #111111);
         font-size: 1rem;
         margin: 0;
       }
