@@ -9,8 +9,8 @@ npm install ITegs/passkey-client-lib
 ```
 
 Required peer dependencies:
-- `@angular/common >=20 <21`
-- `@angular/core >=20 <21`
+- `@angular/common >=20 <22`
+- `@angular/core >=20 <22`
 - `rxjs >=7.8`
 - `keycloak-js >=26`
 
