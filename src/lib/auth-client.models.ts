@@ -11,6 +11,7 @@ export interface AuthClientConfig {
   passkey?: {
     rpName?: string;
     userVerification?: UserVerificationRequirement;
+    showSetupPromptAfterLogin?: boolean;
   };
 }
 

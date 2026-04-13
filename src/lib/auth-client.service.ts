@@ -101,10 +101,7 @@ export class AuthClientService {
 
   loginWithPassword(options?: KeycloakLoginOptions): Promise<void> {
     this.setPartialState({ loading: true, error: null });
-    return this.keycloak.login({
-      redirectUri: this.currentUrl(),
-      ...options
-    });
+    return this.keycloak.login(options);
   }
 
   logout(options?: KeycloakLogoutOptions): Promise<void> {

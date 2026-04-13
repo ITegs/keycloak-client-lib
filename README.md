@@ -41,7 +41,8 @@ bootstrapApplication(AppComponent, {
       },
       passkey: {
         rpName: 'My App',
-        userVerification: 'preferred'
+        userVerification: 'preferred',
+        showSetupPromptAfterLogin: true
       }
     })
   ]
@@ -52,11 +53,16 @@ Initialize auth state once on app startup:
 
 ```ts
 import { Component, OnInit, inject } from '@angular/core';
-import { AuthClientService } from 'keycloak-client-lib';
+import { AuthClientService, RegisterPasskeyPromptComponent } from 'keycloak-client-lib';
 
 @Component({
   selector: 'app-root',
-  template: '<router-outlet />'
+  standalone: true,
+  imports: [RegisterPasskeyPromptComponent],
+  template: `
+    <router-outlet />
+    <register-passkey-prompt />
+  `
 })
 export class AppComponent implements OnInit {
   private readonly authClient = inject(AuthClientService);
@@ -84,8 +90,8 @@ export class AuthPageComponent {
 }
 ```
 
-`AuthPanelComponent` accepts an optional `redirect` input for post-login navigation.  
-If set, `AuthPanelComponent` redirects there once authentication succeeds and does not render the signed-in account/passkey view.
+Set `passkey.showSetupPromptAfterLogin` in `provideAuthClient(...)` to show a post-login prompt for users with no registered passkeys. Mount `<register-passkey-prompt />` once in the client app root (for example in `app.html`/`app.component.html`) so the prompt can display globally.
+`AuthPanelComponent` `redirect` is used after successful passkey login only; password login continues to use Keycloak's own redirect flow.
 
 ## Auth Context and User Data
 
@@ -125,6 +131,7 @@ export class AccountComponent {}
 - `LoginWithPasskeyButtonComponent`
 - `LogoutButtonComponent`
 - `RegisterPasskeyButtonComponent`
+- `RegisterPasskeyPromptComponent`
 - `PasskeyListComponent`
 - `PasskeyManagerComponent`
 

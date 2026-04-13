@@ -9,6 +9,7 @@ export * from './src/lib/components/auth-panel.component';
 export * from './src/lib/components/login-with-passkey-button.component';
 export * from './src/lib/components/login-with-password-button.component';
 export * from './src/lib/components/register-passkey-button.component';
+export * from './src/lib/components/register-passkey-prompt.component';
 export * from './src/lib/components/logout-button.component';
 export * from './src/lib/components/passkey-list.component';
 export * from './src/lib/components/passkey-manager.component';

@@ -1,9 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, DestroyRef, Input, OnInit, inject } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { filter } from 'rxjs';
+import { Component, Input } from '@angular/core';
 import { AuthGateComponent } from './auth-gate.component';
-import { AuthClientService } from '../auth-client.service';
 import { AuthUserComponent } from './auth-user.component';
 import { LoginWithPasskeyButtonComponent } from './login-with-passkey-button.component';
 import { LoginWithPasswordButtonComponent } from './login-with-password-button.component';
@@ -35,27 +32,29 @@ import { PasskeyManagerComponent } from './passkey-manager.component';
 
       <auth-gate [loadingLabel]="loadingLabel">
         <div authUnauthenticated class="pk-auth-actions pk-auth-actions-stack">
-          <login-with-passkey-button [label]="loginWithPasskeyLabel" [disabled]="disabled" />
+          <login-with-passkey-button
+            [label]="loginWithPasskeyLabel"
+            [disabled]="disabled"
+            (success)="onPasskeyLoginSuccess()"
+          />
           <login-with-password-button [label]="loginLabel" [disabled]="disabled" />
         </div>
 
-        @if (!redirect) {
-          <div authAuthenticated class="pk-auth-content">
-            <auth-user [title]="userTitle" [showRoles]="showRoles" [unauthenticatedLabel]="''" />
-            <div class="pk-auth-actions">
-              <logout-button [label]="logoutLabel" [disabled]="disabled" />
-            </div>
-            <passkey-manager
-              [disabled]="disabled"
-              [title]="passkeyTitle"
-              [registerLabel]="registerPasskeyLabel"
-              [registerLoadingLabel]="registerPasskeyLoadingLabel"
-              [refreshLabel]="refreshPasskeysLabel"
-              [removeLabel]="removePasskeyLabel"
-              [emptyLabel]="emptyPasskeysLabel"
-            />
+        <div authAuthenticated class="pk-auth-content">
+          <auth-user [title]="userTitle" [showRoles]="showRoles" [unauthenticatedLabel]="''" />
+          <div class="pk-auth-actions">
+            <logout-button [label]="logoutLabel" [disabled]="disabled" />
           </div>
-        }
+          <passkey-manager
+            [disabled]="disabled"
+            [title]="passkeyTitle"
+            [registerLabel]="registerPasskeyLabel"
+            [registerLoadingLabel]="registerPasskeyLoadingLabel"
+            [refreshLabel]="refreshPasskeysLabel"
+            [removeLabel]="removePasskeyLabel"
+            [emptyLabel]="emptyPasskeysLabel"
+          />
+        </div>
       </auth-gate>
     </section>
   `,
@@ -115,7 +114,7 @@ import { PasskeyManagerComponent } from './passkey-manager.component';
     `
   ]
 })
-export class AuthPanelComponent implements OnInit {
+export class AuthPanelComponent {
   @Input() title = 'Authentication';
   @Input() description = 'Sign in to continue.';
   @Input() userTitle = 'Signed in user';
@@ -133,21 +132,12 @@ export class AuthPanelComponent implements OnInit {
   @Input() showRoles = true;
   @Input() disabled = false;
 
-  private readonly authClient = inject(AuthClientService);
-  private readonly destroyRef = inject(DestroyRef);
-  private redirected = false;
-
-  ngOnInit(): void {
-    this.authClient.authenticated$
-      .pipe(
-        filter((authenticated) => authenticated),
-        takeUntilDestroyed(this.destroyRef)
-      )
-      .subscribe(() => this.redirectAfterLogin());
+  onPasskeyLoginSuccess(): void {
+    this.redirectAfterPasskeyLogin();
   }
 
-  private redirectAfterLogin(): void {
-    if (this.redirected || !this.redirect || typeof window === 'undefined') {
+  private redirectAfterPasskeyLogin(): void {
+    if (!this.redirect || typeof window === 'undefined') {
       return;
     }
 
@@ -156,7 +146,6 @@ export class AuthPanelComponent implements OnInit {
       return;
     }
 
-    this.redirected = true;
     window.location.assign(target);
   }
 }

@@ -70,7 +70,7 @@ import { AuthClientService } from '../auth-client.service';
 
       .pk-list-actions {
         display: flex;
-        justify-content: flex-end;
+        justify-content: flex-start;
       }
 
       .pk-items {
