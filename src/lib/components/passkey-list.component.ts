@@ -1,5 +1,17 @@
 import { CommonModule } from '@angular/common';
-import { Component, DestroyRef, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges, inject } from '@angular/core';
+import {
+  ChangeDetectorRef,
+  Component,
+  DestroyRef,
+  EventEmitter,
+  Input,
+  OnChanges,
+  OnInit,
+  Output,
+  NgZone,
+  SimpleChanges,
+  inject
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthPasskeyCredentialSummary } from '../auth-client.models';
 import { AuthClientService } from '../auth-client.service';
@@ -176,24 +188,18 @@ export class PasskeyListComponent implements OnInit, OnChanges {
   private ready = false;
   private authenticated = false;
   private refreshRequestId = 0;
-  private canManageSnapshot = false;
+  private previousCanManage = false;
+  private initialLoadCompleted = false;
   private readonly destroyRef = inject(DestroyRef);
+  private readonly ngZone = inject(NgZone);
+  private readonly cdr = inject(ChangeDetectorRef);
+  private readonly authClient = inject(AuthClientService);
 
-  constructor(private readonly authClient: AuthClientService) {
+  ngOnInit(): void {
     this.authClient.state$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((state) => {
-      const previousCanManage = this.canManageSnapshot;
       this.ready = state.ready;
       this.authenticated = state.authenticated;
-      this.canManageSnapshot = this.canManage;
-
-      if (!this.canManageSnapshot) {
-        this.credentials = [];
-        this.loading = false;
-      }
-
-      if (this.canManageSnapshot && !previousCanManage) {
-        void this.refresh();
-      }
+      this.syncCanManageState();
     });
   }
 
@@ -201,49 +207,49 @@ export class PasskeyListComponent implements OnInit, OnChanges {
     return this.ready && this.authenticated && !this.disabled;
   }
 
-  ngOnInit(): void {
-    if (this.canManage) {
-      void this.refresh();
-    }
-  }
-
   ngOnChanges(changes: SimpleChanges): void {
-    if (!this.ready || !this.authenticated) {
-      return;
-    }
-
-    if (changes['disabled'] && this.canManage) {
-      void this.refresh();
+    if (changes['disabled']) {
+      this.syncCanManageState();
     }
   }
 
   async refresh(): Promise<void> {
     if (!this.canManage) {
-      this.credentials = [];
-      this.errorMessage = '';
+      this.runInAngular(() => {
+        this.credentials = [];
+        this.errorMessage = '';
+      });
       return;
     }
 
     const requestId = ++this.refreshRequestId;
-    this.loading = true;
-    this.errorMessage = '';
+    this.runInAngular(() => {
+      this.loading = true;
+      this.errorMessage = '';
+    });
     try {
       const credentials = await this.authClient.listPasskeys();
       if (requestId !== this.refreshRequestId) {
         return;
       }
-      this.credentials = credentials;
-      this.refreshed.emit(credentials);
+      this.runInAngular(() => {
+        this.credentials = credentials;
+        this.refreshed.emit(credentials);
+      });
     } catch (error) {
       if (requestId !== this.refreshRequestId) {
         return;
       }
       const typedError = error instanceof Error ? error : new Error('Unable to load passkeys.');
-      this.errorMessage = typedError.message;
-      this.failure.emit(typedError);
+      this.runInAngular(() => {
+        this.errorMessage = typedError.message;
+        this.failure.emit(typedError);
+      });
     } finally {
       if (requestId === this.refreshRequestId) {
-        this.loading = false;
+        this.runInAngular(() => {
+          this.loading = false;
+        });
       }
     }
   }
@@ -261,9 +267,11 @@ export class PasskeyListComponent implements OnInit, OnChanges {
       await this.refresh();
     } catch (error) {
       const typedError = error instanceof Error ? error : new Error('Unable to remove passkey.');
-      this.errorMessage = typedError.message;
-      this.failure.emit(typedError);
-      this.loading = false;
+      this.runInAngular(() => {
+        this.errorMessage = typedError.message;
+        this.failure.emit(typedError);
+        this.loading = false;
+      });
     }
   }
 
@@ -276,5 +284,33 @@ export class PasskeyListComponent implements OnInit, OnChanges {
       return 'Created date unavailable';
     }
     return `Created ${parsed.toLocaleString()}`;
+  }
+
+  private syncCanManageState(): void {
+    const canManageNow = this.canManage;
+    if (!canManageNow) {
+      this.previousCanManage = false;
+      this.initialLoadCompleted = false;
+      this.credentials = [];
+      this.loading = false;
+      this.errorMessage = '';
+      return;
+    }
+
+    if (!this.previousCanManage && !this.initialLoadCompleted) {
+      this.previousCanManage = true;
+      this.initialLoadCompleted = true;
+      void this.refresh();
+      return;
+    }
+
+    this.previousCanManage = true;
+  }
+
+  private runInAngular(action: () => void): void {
+    this.ngZone.run(() => {
+      action();
+      this.cdr.markForCheck();
+    });
   }
 }

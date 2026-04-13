@@ -24,9 +24,13 @@ interface PasskeyCredentialResponse {
   createdDate?: number;
 }
 
+interface AccountCredentialMetadataResponse extends PasskeyCredentialResponse {
+  credential?: PasskeyCredentialResponse;
+}
+
 interface AccountCredentialTypeResponse {
   type?: string;
-  userCredentialMetadatas?: Array<{ credential?: PasskeyCredentialResponse }>;
+  userCredentialMetadatas?: AccountCredentialMetadataResponse[];
 }
 
 const PASSKEY_CREDENTIAL_TYPES = new Set(['webauthn-passwordless', 'webauthn']);
@@ -541,7 +545,7 @@ export class AuthClientService {
           return [];
         }
         return credentialType.userCredentialMetadatas
-          .map((metadata) => metadata.credential)
+          .map((metadata) => metadata.credential ?? metadata)
           .filter((credential): credential is PasskeyCredentialResponse => Boolean(credential));
       }
 
