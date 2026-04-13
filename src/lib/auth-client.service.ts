@@ -552,7 +552,7 @@ export class AuthClientService {
   private currentUrl(): string {
     return typeof window === 'undefined' ? '/' : window.location.href;
   }
-w
+
   private errorMessage(error: unknown, fallback: string): string {
     if (error instanceof Error && error.message) {
       return error.message;

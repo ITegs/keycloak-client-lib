@@ -6,7 +6,7 @@ import { AuthClientService } from '../auth-client.service';
   selector: 'login-with-password-button',
   standalone: true,
   template: `
-    <button class="pk-btn pk-btn-primary" type="button" (click)="onClick()">
+    <button class="pk-btn pk-btn-secondary" type="button" (click)="onClick()">
       {{ label }}
     </button>
   `,
@@ -33,18 +33,18 @@ import { AuthClientService } from '../auth-client.service';
         cursor: not-allowed;
       }
 
-      .pk-btn-primary {
-        background: var(--pk-primary-bg, #111111);
-        border-color: var(--pk-primary-bg, #111111);
-        color: var(--pk-primary-fg, #ffffff);
+      .pk-btn-secondary {
+        background: var(--pk-secondary-bg, #ffffff);
+        border-color: var(--pk-secondary-border, #a3a3a3);
+        color: var(--pk-secondary-fg, #111111);
       }
 
-      .pk-btn-primary:not(:disabled):hover {
-        background: var(--pk-primary-bg-hover, #000000);
-        border-color: var(--pk-primary-bg-hover, #000000);
+      .pk-btn-secondary:not(:disabled):hover {
+        background: var(--pk-secondary-bg-hover, #f5f5f5);
+        border-color: var(--pk-secondary-border-hover, #737373);
       }
 
-      .pk-btn-primary:not(:disabled):active {
+      .pk-btn-secondary:not(:disabled):active {
         transform: translateY(1px);
       }
     `

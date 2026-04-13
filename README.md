@@ -77,10 +77,15 @@ import { AuthPanelComponent } from 'keycloak-client-lib';
   selector: 'app-auth-page',
   standalone: true,
   imports: [AuthPanelComponent],
-  template: '<auth-panel />'
+  template: '<auth-panel [redirect]="postLoginRedirect" />'
 })
-export class AuthPageComponent {}
+export class AuthPageComponent {
+  postLoginRedirect = `${window.location.origin}/account`;
+}
 ```
+
+`AuthPanelComponent` accepts an optional `redirect` input for post-login navigation.  
+If set, `AuthPanelComponent` redirects there once authentication succeeds and does not render the signed-in account/passkey view.
 
 ## Auth Context and User Data
 

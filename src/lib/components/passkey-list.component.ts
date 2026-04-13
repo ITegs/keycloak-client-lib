@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, DestroyRef, EventEmitter, Input, OnInit, Output, inject } from '@angular/core';
+import { Component, DestroyRef, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthPasskeyCredentialSummary } from '../auth-client.models';
 import { AuthClientService } from '../auth-client.service';
@@ -153,7 +153,7 @@ import { AuthClientService } from '../auth-client.service';
     `
   ]
 })
-export class PasskeyListComponent implements OnInit {
+export class PasskeyListComponent implements OnInit, OnChanges {
   @Input() disabled = false;
   @Input() autoLoad = true;
   @Input() emptyLabel = 'No passkeys registered yet.';
@@ -170,15 +170,24 @@ export class PasskeyListComponent implements OnInit {
   errorMessage = '';
   private ready = false;
   private authenticated = false;
+  private refreshRequestId = 0;
+  private canManageSnapshot = false;
   private readonly destroyRef = inject(DestroyRef);
 
   constructor(private readonly authClient: AuthClientService) {
     this.authClient.state$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((state) => {
+      const previousCanManage = this.canManageSnapshot;
       this.ready = state.ready;
       this.authenticated = state.authenticated;
-      if (!this.canManage) {
+      this.canManageSnapshot = this.canManage;
+
+      if (!this.canManageSnapshot) {
         this.credentials = [];
         this.loading = false;
+      }
+
+      if (this.autoLoad && this.canManageSnapshot && !previousCanManage) {
+        void this.refresh();
       }
     });
   }
@@ -193,6 +202,16 @@ export class PasskeyListComponent implements OnInit {
     }
   }
 
+  ngOnChanges(changes: SimpleChanges): void {
+    if (!this.ready || !this.authenticated) {
+      return;
+    }
+
+    if (changes['disabled'] && this.canManage && this.autoLoad) {
+      void this.refresh();
+    }
+  }
+
   async refresh(): Promise<void> {
     if (!this.canManage) {
       this.credentials = [];
@@ -200,17 +219,27 @@ export class PasskeyListComponent implements OnInit {
       return;
     }
 
+    const requestId = ++this.refreshRequestId;
     this.loading = true;
     this.errorMessage = '';
     try {
-      this.credentials = await this.authClient.listPasskeys();
-      this.refreshed.emit(this.credentials);
+      const credentials = await this.authClient.listPasskeys();
+      if (requestId !== this.refreshRequestId) {
+        return;
+      }
+      this.credentials = credentials;
+      this.refreshed.emit(credentials);
     } catch (error) {
+      if (requestId !== this.refreshRequestId) {
+        return;
+      }
       const typedError = error instanceof Error ? error : new Error('Unable to load passkeys.');
       this.errorMessage = typedError.message;
       this.failure.emit(typedError);
     } finally {
-      this.loading = false;
+      if (requestId === this.refreshRequestId) {
+        this.loading = false;
+      }
     }
   }
 

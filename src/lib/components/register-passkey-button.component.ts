@@ -5,7 +5,7 @@ import { AuthClientService } from '../auth-client.service';
   selector: 'register-passkey-button',
   standalone: true,
   template: `
-    <button class="pk-btn pk-btn-primary" type="button" (click)="onClick()">
+    <button class="pk-btn pk-btn-primary" type="button" [disabled]="disabled || loading" (click)="onClick()">
       {{ loading ? loadingLabel : label }}
     </button>
   `,
