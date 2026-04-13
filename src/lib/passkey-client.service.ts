@@ -6,7 +6,7 @@ import Keycloak, {
   KeycloakLoginOptions,
   KeycloakLogoutOptions
 } from 'keycloak-js';
-import { arrayBufferToBase64Url, base64UrlToUint8Array } from './base64url';
+import { arrayBufferToBase64Url, base64UrlToArrayBuffer } from './base64url';
 import {
   PasskeyActionResult,
   PasskeyAuthState,
@@ -100,7 +100,7 @@ export class PasskeyClientService {
     const userIdBytes = new TextEncoder().encode(accountId).slice(0, 64);
     const creationResult = (await navigator.credentials.create({
       publicKey: {
-        challenge: base64UrlToUint8Array(challengePayload.challenge),
+        challenge: base64UrlToArrayBuffer(challengePayload.challenge),
         rp: {
           name: this.config.passkey?.rpName ?? 'Keycloak App',
           id: window.location.hostname
@@ -155,13 +155,13 @@ export class PasskeyClientService {
     const challengePayload = await this.fetchChallenge();
     const assertionResult = (await navigator.credentials.get({
       publicKey: {
-        challenge: base64UrlToUint8Array(challengePayload.challenge),
+        challenge: base64UrlToArrayBuffer(challengePayload.challenge),
         ...(challengePayload.credentialId
           ? {
               allowCredentials: [
                 {
                   type: 'public-key',
-                  id: base64UrlToUint8Array(challengePayload.credentialId)
+                  id: base64UrlToArrayBuffer(challengePayload.credentialId)
                 }
               ]
             }

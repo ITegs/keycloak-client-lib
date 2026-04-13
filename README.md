@@ -1,24 +1,22 @@
 # passkey-client-lib
 
-Angular client library for apps that authenticate against this repository's Keycloak instance with the custom passkey extension.
-
-It includes:
-- Keycloak + passkey client logic (`PasskeyClientService`)
-- reusable UI components:
-  - `<login-with-passkey-button>`
-  - `<login-with-password-button>`
-  - `<register-passkey-button>`
-  - `<logout-button>`
-  - `<passkey-list>`
-  - `<passkey-manager>`
+Angular standalone component + service library for Keycloak passkey (WebAuthn) flows.
 
 ## Install
 
-Add this library and its peer dependencies to your Angular app.
+```bash
+npm install ITegs/passkey-client-lib
+```
 
-## Configure
+Required peer dependencies:
+- `@angular/common >=20 <21`
+- `@angular/core >=20 <21`
+- `rxjs >=7.8`
+- `keycloak-js >=26`
 
-Register the client config in your app providers:
+## Quick Start
+
+Register the library config once during bootstrap:
 
 ```ts
 import { bootstrapApplication } from '@angular/platform-browser';
@@ -46,7 +44,7 @@ bootstrapApplication(AppComponent, {
 });
 ```
 
-## Init auth once on app start
+Initialize auth state once on app startup:
 
 ```ts
 import { Component, inject } from '@angular/core';
@@ -65,7 +63,7 @@ export class AppComponent {
 }
 ```
 
-## Use reusable components
+Use the provided standalone UI components:
 
 ```ts
 import { Component } from '@angular/core';
@@ -95,16 +93,42 @@ import {
 export class AuthPageComponent {}
 ```
 
-## Notes
+## Exports
 
-- Serve a `silent-check-sso.html` page in your app:
-  ```html
-  <!doctype html>
-  <html lang="en">
-    <body>
-      <script>parent.postMessage(location.href, location.origin);</script>
-    </body>
-  </html>
-  ```
-- `loginWithPasskey()` calls `/realms/{realm}/passkey/authenticate`, then refreshes Keycloak state via `check-sso`.
-- `passkey-list` uses Keycloak account endpoint `/realms/{realm}/account/credentials` to list/remove passkeys.
+- `providePasskeyClient`
+- `PasskeyClientService`
+- `PasskeyAuthState`, `PasskeyActionResult`, `PasskeyClientConfig`, `PasskeyCredentialSummary`
+- `LoginWithPasskeyButtonComponent`
+- `LoginWithPasswordButtonComponent`
+- `RegisterPasskeyButtonComponent`
+- `LogoutButtonComponent`
+- `PasskeyListComponent`
+- `PasskeyManagerComponent`
+
+## Runtime Notes
+
+- `silent-check-sso.html` must be served by your app:
+
+```html
+<!doctype html>
+<html lang="en">
+  <body>
+    <script>parent.postMessage(location.href, location.origin);</script>
+  </body>
+</html>
+```
+
+- `loginWithPasskey()` posts to `/realms/{realm}/passkey/authenticate`, then refreshes auth state with Keycloak `check-sso`.
+- `passkey-list` loads and removes credentials from `/realms/{realm}/account/credentials`.
+
+## Repository Release Flow (Maintainers)
+
+Build and validate tarball contents:
+
+```bash
+npm install
+npm run build
+npm run pack:dry
+```
+
+This package is intended to be consumed directly from GitHub, not from the npm registry.
