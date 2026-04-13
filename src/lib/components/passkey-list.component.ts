@@ -16,27 +16,33 @@ import { AuthClientService } from '../auth-client.service';
         </button>
       </div>
 
-      <p class="pk-feedback pk-feedback-empty" *ngIf="!canManage">{{ unauthenticatedLabel }}</p>
-      <p class="pk-feedback pk-feedback-error" *ngIf="errorMessage">{{ errorMessage }}</p>
-      <p class="pk-feedback pk-feedback-empty" *ngIf="canManage && !loading && !errorMessage && credentials.length === 0">
-        {{ emptyLabel }}
-      </p>
+      @if (!canManage) {
+        <p class="pk-feedback pk-feedback-empty">{{ unauthenticatedLabel }}</p>
+      }
+      @if (errorMessage) {
+        <p class="pk-feedback pk-feedback-error">{{ errorMessage }}</p>
+      }
+      @if (canManage && !loading && !errorMessage && credentials.length === 0) {
+        <p class="pk-feedback pk-feedback-empty">{{ emptyLabel }}</p>
+      }
 
-      <ul class="pk-items" *ngIf="canManage && credentials.length > 0">
-        <li class="pk-item" *ngFor="let credential of credentials">
-          <div class="pk-item-info">
-            <strong class="pk-item-name">{{ credential.name }}</strong>
-            <div class="pk-item-date">{{ formatCreatedDate(credential.createdDate) }}</div>
-          </div>
-          <button
-            class="pk-btn pk-btn-danger"
-            type="button"
-            (click)="remove(credential.id)"
-          >
-            {{ removeLabel }}
-          </button>
-        </li>
-      </ul>
+      @if (canManage && credentials.length > 0) {
+        <ul class="pk-items">
+          <li class="pk-item" *ngFor="let credential of credentials">
+            <div class="pk-item-info">
+              <strong class="pk-item-name">{{ credential.name }}</strong>
+              <div class="pk-item-date">{{ formatCreatedDate(credential.createdDate) }}</div>
+            </div>
+            <button
+              class="pk-btn pk-btn-danger"
+              type="button"
+              (click)="remove(credential.id)"
+            >
+              {{ removeLabel }}
+            </button>
+          </li>
+        </ul>
+      }
     </div>
   `,
   styles: [
@@ -155,7 +161,6 @@ import { AuthClientService } from '../auth-client.service';
 })
 export class PasskeyListComponent implements OnInit, OnChanges {
   @Input() disabled = false;
-  @Input() autoLoad = true;
   @Input() emptyLabel = 'No passkeys registered yet.';
   @Input() unauthenticatedLabel = 'Log in to manage passkeys.';
   @Input() refreshLabel = 'Refresh';
@@ -186,7 +191,7 @@ export class PasskeyListComponent implements OnInit, OnChanges {
         this.loading = false;
       }
 
-      if (this.autoLoad && this.canManageSnapshot && !previousCanManage) {
+      if (this.canManageSnapshot && !previousCanManage) {
         void this.refresh();
       }
     });
@@ -197,7 +202,7 @@ export class PasskeyListComponent implements OnInit, OnChanges {
   }
 
   ngOnInit(): void {
-    if (this.autoLoad && this.canManage) {
+    if (this.canManage) {
       void this.refresh();
     }
   }
@@ -207,7 +212,7 @@ export class PasskeyListComponent implements OnInit, OnChanges {
       return;
     }
 
-    if (changes['disabled'] && this.canManage && this.autoLoad) {
+    if (changes['disabled'] && this.canManage) {
       void this.refresh();
     }
   }

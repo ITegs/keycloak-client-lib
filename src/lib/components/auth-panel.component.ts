@@ -34,21 +34,23 @@ import { PasskeyManagerComponent } from './passkey-manager.component';
           <login-with-password-button [label]="loginLabel" [disabled]="disabled" />
         </div>
 
-        <div *ngIf="!redirect" authAuthenticated class="pk-auth-content">
-          <auth-user [title]="userTitle" [showRoles]="showRoles" [unauthenticatedLabel]="''" />
-          <div class="pk-auth-actions">
-            <logout-button [label]="logoutLabel" [disabled]="disabled" />
+        @if (!redirect) {
+          <div authAuthenticated class="pk-auth-content">
+            <auth-user [title]="userTitle" [showRoles]="showRoles" [unauthenticatedLabel]="''" />
+            <div class="pk-auth-actions">
+              <logout-button [label]="logoutLabel" [disabled]="disabled" />
+            </div>
+            <passkey-manager
+              [disabled]="disabled"
+              [title]="passkeyTitle"
+              [registerLabel]="registerPasskeyLabel"
+              [registerLoadingLabel]="registerPasskeyLoadingLabel"
+              [refreshLabel]="refreshPasskeysLabel"
+              [removeLabel]="removePasskeyLabel"
+              [emptyLabel]="emptyPasskeysLabel"
+            />
           </div>
-          <passkey-manager
-            [disabled]="disabled"
-            [title]="passkeyTitle"
-            [registerLabel]="registerPasskeyLabel"
-            [registerLoadingLabel]="registerPasskeyLoadingLabel"
-            [refreshLabel]="refreshPasskeysLabel"
-            [removeLabel]="removePasskeyLabel"
-            [emptyLabel]="emptyPasskeysLabel"
-          />
-        </div>
+        }
       </auth-gate>
     </section>
   `,

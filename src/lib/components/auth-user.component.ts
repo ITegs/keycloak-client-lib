@@ -8,19 +8,27 @@ import { AuthUser } from '../auth-client.models';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <ng-container *ngIf="authClient.state$ | async as state">
-      <p class="pk-feedback" *ngIf="!state.ready">{{ loadingLabel }}</p>
-      <p class="pk-feedback" *ngIf="state.ready && !state.authenticated">{{ unauthenticatedLabel }}</p>
+    @if (authClient.state$ | async; as state) {
+      @if (!state.ready) {
+        <p class="pk-feedback">{{ loadingLabel }}</p>
+      }
+      @if (state.ready && !state.authenticated) {
+        <p class="pk-feedback">{{ unauthenticatedLabel }}</p>
+      }
 
-      <section class="pk-user" *ngIf="state.ready && state.authenticated && state.user as user">
-        <h3 class="pk-user-title">{{ title }}</h3>
-        <div class="pk-user-primary">{{ userDisplayName(user) }}</div>
-        <div class="pk-user-secondary" *ngIf="user.email">{{ user.email }}</div>
-        <div class="pk-user-roles" *ngIf="showRoles && user.roles.length > 0">
-          Roles: {{ user.roles.join(', ') }}
-        </div>
-      </section>
-    </ng-container>
+      @if (state.ready && state.authenticated && state.user; as user) {
+        <section class="pk-user">
+          <h3 class="pk-user-title">{{ title }}</h3>
+          <div class="pk-user-primary">{{ userDisplayName(user) }}</div>
+          @if (user.email) {
+            <div class="pk-user-secondary">{{ user.email }}</div>
+          }
+          @if (showRoles && user.roles.length > 0) {
+            <div class="pk-user-roles">Roles: {{ user.roles.join(', ') }}</div>
+          }
+        </section>
+      }
+    }
   `,
   styles: [
     `

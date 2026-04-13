@@ -18,6 +18,7 @@ import {
 
 interface PasskeyCredentialResponse {
   id?: string;
+  type?: string;
   name?: string;
   userLabel?: string;
   createdDate?: number;
@@ -338,9 +339,7 @@ export class AuthClientService {
       throw new Error('Failed to load passkeys');
     }
 
-    const mappedCredentials = Array.isArray(payload)
-      ? this.parseCredentialTypes(payload as AccountCredentialTypeResponse[])
-      : this.parseCredentialPayload(payload);
+    const mappedCredentials = this.parseCredentialPayload(payload);
 
     return mappedCredentials.map((credential) => ({
       id: credential.id ?? '',
@@ -510,28 +509,49 @@ export class AuthClientService {
     return trimmed.length > 0 ? trimmed : null;
   }
 
-  private parseCredentialTypes(payload: AccountCredentialTypeResponse[]): PasskeyCredentialResponse[] {
-    return payload.flatMap((credentialType) => {
-      const type = String(credentialType.type ?? '').toLowerCase();
+  private parseCredentialPayload(payload: unknown): PasskeyCredentialResponse[] {
+    if (Array.isArray(payload)) {
+      return this.parseCredentialArray(payload);
+    }
+
+    if (payload && typeof payload === 'object') {
+      const credentials = (payload as { credentials?: unknown }).credentials;
+      if (Array.isArray(credentials)) {
+        return this.parseCredentialArray(credentials);
+      }
+    }
+
+    return [];
+  }
+
+  private parseCredentialArray(payload: unknown[]): PasskeyCredentialResponse[] {
+    if (payload.length === 0) {
+      return [];
+    }
+
+    return payload.flatMap((item) => {
+      if (!item || typeof item !== 'object') {
+        return [];
+      }
+
+      const credentialType = item as AccountCredentialTypeResponse;
+      if (Array.isArray(credentialType.userCredentialMetadatas)) {
+        const type = String(credentialType.type ?? '').toLowerCase();
+        if (!PASSKEY_CREDENTIAL_TYPES.has(type)) {
+          return [];
+        }
+        return credentialType.userCredentialMetadatas
+          .map((metadata) => metadata.credential)
+          .filter((credential): credential is PasskeyCredentialResponse => Boolean(credential));
+      }
+
+      const directCredential = item as PasskeyCredentialResponse;
+      const type = String(directCredential.type ?? '').toLowerCase();
       if (!PASSKEY_CREDENTIAL_TYPES.has(type)) {
         return [];
       }
-      const metadatas = Array.isArray(credentialType.userCredentialMetadatas)
-        ? credentialType.userCredentialMetadatas
-        : [];
-      return metadatas.map((metadata) => metadata.credential).filter(Boolean) as PasskeyCredentialResponse[];
+      return [directCredential];
     });
-  }
-
-  private parseCredentialPayload(payload: unknown): PasskeyCredentialResponse[] {
-    if (
-      payload &&
-      typeof payload === 'object' &&
-      Array.isArray((payload as { credentials?: PasskeyCredentialResponse[] }).credentials)
-    ) {
-      return (payload as { credentials: PasskeyCredentialResponse[] }).credentials;
-    }
-    return [];
   }
 
   private async parseJsonResponse<T>(response: Response, fallbackValue: T): Promise<T> {

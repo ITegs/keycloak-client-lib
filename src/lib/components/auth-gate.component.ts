@@ -7,22 +7,20 @@ import { AuthClientService } from '../auth-client.service';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <ng-container *ngIf="authClient.state$ | async as state">
-      <ng-container *ngIf="state.ready; else loadingState">
-        <ng-container *ngIf="state.authenticated; else unauthenticatedState">
+    @if (authClient.state$ | async; as state) {
+      @if (state.ready) {
+        @if (state.authenticated) {
           <ng-content select="[authAuthenticated]"></ng-content>
-        </ng-container>
-      </ng-container>
-    </ng-container>
-
-    <ng-template #unauthenticatedState>
-      <ng-content select="[authUnauthenticated]"></ng-content>
-    </ng-template>
-
-    <ng-template #loadingState>
-      <p class="pk-feedback" *ngIf="loadingLabel">{{ loadingLabel }}</p>
-      <ng-content select="[authLoading]"></ng-content>
-    </ng-template>
+        } @else {
+          <ng-content select="[authUnauthenticated]"></ng-content>
+        }
+      } @else {
+        @if (loadingLabel) {
+          <p class="pk-feedback">{{ loadingLabel }}</p>
+        }
+        <ng-content select="[authLoading]"></ng-content>
+      }
+    }
   `,
   styles: [
     `
