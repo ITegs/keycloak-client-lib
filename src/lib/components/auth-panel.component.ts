@@ -25,11 +25,16 @@ import { PasskeyManagerComponent } from './passkey-manager.component';
   template: `
     <section class="pk-auth-panel">
       <header class="pk-auth-header">
-        <h2 class="pk-auth-title">{{ title }}</h2>
+        <div class="pk-auth-heading">
+          <h2 class="pk-auth-title">{{ title }}</h2>
+          @if (description) {
+            <p class="pk-auth-description">{{ description }}</p>
+          }
+        </div>
       </header>
 
       <auth-gate [loadingLabel]="loadingLabel">
-        <div authUnauthenticated class="pk-auth-actions">
+        <div authUnauthenticated class="pk-auth-actions pk-auth-actions-stack">
           <login-with-passkey-button [label]="loginWithPasskeyLabel" [disabled]="disabled" />
           <login-with-password-button [label]="loginLabel" [disabled]="disabled" />
         </div>
@@ -61,24 +66,33 @@ import { PasskeyManagerComponent } from './passkey-manager.component';
       }
 
       .pk-auth-panel {
-        background: var(--pk-surface-soft, #f7f7f7);
-        border: 1px solid var(--pk-border, #d4d4d4);
-        border-radius: var(--pk-radius-lg, 16px);
-        box-shadow: var(--pk-shadow-panel, 0 8px 24px rgba(0, 0, 0, 0.07));
+        background: var(--pk-surface-soft, #f8fafc);
+        border-radius: var(--pk-radius-lg, 8px);
+        box-shadow: var(--pk-shadow-panel, 0 1px 2px rgba(15, 23, 42, 0.08));
         display: grid;
         gap: 0.9rem;
         padding: 1rem;
       }
 
       .pk-auth-header {
-        align-items: center;
-        display: flex;
-        justify-content: space-between;
+        display: block;
+      }
+
+      .pk-auth-heading {
+        display: grid;
+        gap: 0.35rem;
       }
 
       .pk-auth-title {
-        color: var(--pk-text-strong, #111111);
+        color: var(--pk-text-strong, #1f2937);
         font-size: 1.05rem;
+        font-weight: 600;
+        margin: 0;
+      }
+
+      .pk-auth-description {
+        color: var(--pk-text-muted, #64748b);
+        font-size: 0.92rem;
         margin: 0;
       }
 
@@ -92,11 +106,18 @@ import { PasskeyManagerComponent } from './passkey-manager.component';
         flex-wrap: wrap;
         gap: 0.6rem;
       }
+
+      .pk-auth-actions-stack {
+        align-items: flex-start;
+        flex-direction: column;
+        flex-wrap: nowrap;
+      }
     `
   ]
 })
 export class AuthPanelComponent implements OnInit {
   @Input() title = 'Authentication';
+  @Input() description = 'Sign in to continue.';
   @Input() userTitle = 'Signed in user';
   @Input() loadingLabel = 'Checking authentication...';
   @Input() loginLabel = 'Login';

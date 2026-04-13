@@ -153,15 +153,13 @@ Components include defaults and can be themed with CSS variables:
 
 ```css
 :root {
-  --pk-primary-bg: #111111;
-  --pk-primary-bg-hover: #000000;
-  --pk-accent-bg: #ffffff;
-  --pk-accent-border: #111111;
-  --pk-muted-border: #111111;
-  --pk-danger-border: #111111;
-  --pk-border: #d4d4d4;
-  --pk-text-strong: #111111;
-  --pk-text-muted: #555555;
-  --pk-radius: 12px;
+  --pk-primary-bg: #334155;
+  --pk-primary-bg-hover: #1f2937;
+  --pk-accent-bg: #334155;
+  --pk-accent-bg-hover: #1f2937;
+  --pk-text-strong: #1f2937;
+  --pk-text-muted: #64748b;
+  --pk-radius: 6px;
+  --pk-radius-lg: 8px;
 }
 ```

@@ -17,13 +17,14 @@ import { AuthClientService } from '../auth-client.service';
 
       .pk-btn {
         appearance: none;
-        border: 1px solid var(--pk-btn-border, #111111);
-        border-radius: var(--pk-radius, 12px);
+        border: none;
+        border-radius: var(--pk-radius, 6px);
         font: inherit;
         font-weight: 600;
         line-height: 1.2;
+        outline: none;
         padding: 0.6rem 1rem;
-        transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.12s ease;
+        transition: background-color 0.2s ease, color 0.2s ease;
         cursor: pointer;
       }
 
@@ -33,18 +34,12 @@ import { AuthClientService } from '../auth-client.service';
       }
 
       .pk-btn-primary {
-        background: var(--pk-primary-bg, #111111);
-        border-color: var(--pk-primary-bg, #111111);
+        background: var(--pk-primary-bg, #334155);
         color: var(--pk-primary-fg, #ffffff);
       }
 
       .pk-btn-primary:not(:disabled):hover {
-        background: var(--pk-primary-bg-hover, #000000);
-        border-color: var(--pk-primary-bg-hover, #000000);
-      }
-
-      .pk-btn-primary:not(:disabled):active {
-        transform: translateY(1px);
+        background: var(--pk-primary-bg-hover, #1f2937);
       }
     `
   ]

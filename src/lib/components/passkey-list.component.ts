@@ -84,8 +84,7 @@ import { AuthClientService } from '../auth-client.service';
       .pk-item {
         align-items: center;
         background: var(--pk-surface, #ffffff);
-        border: 1px solid var(--pk-border, #d4d4d4);
-        border-radius: var(--pk-radius, 12px);
+        border-radius: var(--pk-radius, 6px);
         display: flex;
         gap: 1rem;
         justify-content: space-between;
@@ -97,43 +96,43 @@ import { AuthClientService } from '../auth-client.service';
       }
 
       .pk-item-name {
-        color: var(--pk-text-strong, #111111);
+        color: var(--pk-text-strong, #1f2937);
         display: block;
-        font-weight: 700;
+        font-weight: 600;
       }
 
       .pk-item-date {
-        color: var(--pk-text-muted, #555555);
+        color: var(--pk-text-muted, #64748b);
         font-size: 0.9rem;
       }
 
       .pk-feedback {
         margin: 0;
         padding: 0.65rem 0.8rem;
-        border-radius: var(--pk-radius, 10px);
+        border-radius: var(--pk-radius, 6px);
       }
 
       .pk-feedback-error {
-        background: var(--pk-danger-bg-soft, #f2f2f2);
-        border: 1px solid var(--pk-danger-border-soft, #111111);
-        color: var(--pk-danger-fg-soft, #111111);
+        background: var(--pk-danger-bg-soft, #fef2f2);
+        color: var(--pk-danger-fg-soft, #991b1b);
       }
 
       .pk-feedback-empty {
-        background: var(--pk-muted-bg-soft, #f7f7f7);
-        border: 1px solid var(--pk-border, #d4d4d4);
-        color: var(--pk-text-muted, #555555);
+        background: var(--pk-muted-bg-soft, #f8fafc);
+        color: var(--pk-text-muted, #64748b);
       }
 
       .pk-btn {
         appearance: none;
-        border-radius: var(--pk-radius, 12px);
+        border: none;
+        border-radius: var(--pk-radius, 6px);
         cursor: pointer;
         font: inherit;
         font-weight: 600;
         line-height: 1.2;
+        outline: none;
         padding: 0.5rem 0.85rem;
-        transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.12s ease;
+        transition: background-color 0.2s ease, color 0.2s ease;
       }
 
       .pk-btn:disabled {
@@ -143,30 +142,22 @@ import { AuthClientService } from '../auth-client.service';
 
       .pk-btn-muted {
         background: var(--pk-muted-bg, #ffffff);
-        border: 1px solid var(--pk-muted-border, #111111);
-        color: var(--pk-muted-fg, #111111);
+        color: var(--pk-muted-fg, #475569);
       }
 
       .pk-btn-muted:not(:disabled):hover {
-        background: var(--pk-muted-bg-hover, #111111);
-        border-color: var(--pk-muted-border-hover, #111111);
-        color: var(--pk-muted-fg-hover, #ffffff);
+        background: var(--pk-muted-bg-hover, #f8fafc);
+        color: var(--pk-muted-fg-hover, #334155);
       }
 
       .pk-btn-danger {
         background: var(--pk-danger-bg, #ffffff);
-        border: 1px solid var(--pk-danger-border, #111111);
-        color: var(--pk-danger-fg, #111111);
+        color: var(--pk-danger-fg, #991b1b);
       }
 
       .pk-btn-danger:not(:disabled):hover {
-        background: var(--pk-danger-bg-hover, #111111);
-        border-color: var(--pk-danger-border-hover, #111111);
-        color: var(--pk-danger-fg-hover, #ffffff);
-      }
-
-      .pk-btn:not(:disabled):active {
-        transform: translateY(1px);
+        background: var(--pk-danger-bg-hover, #fef2f2);
+        color: var(--pk-danger-fg-hover, #7f1d1d);
       }
     `
   ]

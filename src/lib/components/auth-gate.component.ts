@@ -29,10 +29,9 @@ import { AuthClientService } from '../auth-client.service';
       }
 
       .pk-feedback {
-        background: var(--pk-muted-bg-soft, #f7f7f7);
-        border: 1px solid var(--pk-border, #d4d4d4);
-        border-radius: var(--pk-radius, 12px);
-        color: var(--pk-text-muted, #555555);
+        background: var(--pk-muted-bg-soft, #f8fafc);
+        border-radius: var(--pk-radius, 6px);
+        color: var(--pk-text-muted, #64748b);
         margin: 0;
         padding: 0.7rem 0.85rem;
       }
